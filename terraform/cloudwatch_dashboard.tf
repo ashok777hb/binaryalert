@@ -109,10 +109,10 @@ EOF
 EOF
 
   // Due to https://github.com/hashicorp/terraform/issues/11574, both ternary branches are always
-  // computed, so we have to use this special idiom (same as modules/lambda/outputs.tf).
-  downloader_function_name = "${module.binaryalert_downloader.function_name}"
+  // computed, so we have to use this special idiom (same as ./modules/lambda/outputs.tf).
+  downloader_function_name = module.binaryalert_downloader.function_name
 
-  downloader_queue_name = "${element(concat(aws_sqs_queue.downloader_queue.*.name, list("")), 0)}"
+  downloader_queue_name = element(concat(aws_sqs_queue.downloader_queue.*.name, tolist([""])), 0)
 
   sqs_downloader = <<EOF
 {
@@ -149,11 +149,11 @@ EOF
       "horizontal": [
         {
           "label": "Max",
-          "value": "${element(concat(aws_sqs_queue.downloader_queue.*.message_retention_seconds, list("")), 0)}"
+          "value": "${element(concat(aws_sqs_queue.downloader_queue.*.message_retention_seconds, tolist([""])), 0)}"
         },
         {
           "label": "Alarm",
-          "value": "${element(concat(aws_cloudwatch_metric_alarm.downloader_sqs_age.*.threshold, list("")), 0)}"
+          "value": "${element(concat(aws_cloudwatch_metric_alarm.downloader_sqs_age.*.threshold, tolist([""])), 0)}"
         }
       ]
     }
@@ -341,7 +341,7 @@ EOF
 }
 EOF
 
-  dashboard_body = "${var.enable_carbon_black_downloader ? local.dashboard_body_with_downloader : local.dashboard_body_without_downloader}"
+  dashboard_body = var.enable_carbon_black_downloader ? local.dashboard_body_with_downloader : local.dashboard_body_without_downloader
 }
 
 resource "aws_cloudwatch_dashboard" "binaryalert" {
@@ -349,5 +349,5 @@ resource "aws_cloudwatch_dashboard" "binaryalert" {
 
   // Terraform automatically converts numbers to strings when putting them in a list.
   // We have to strip quotes around numbers, so that {"value": "123"} turns into {"value": 123}
-  dashboard_body = "${replace(local.dashboard_body, "/\"([0-9]+)\"/", "$1")}"
+  dashboard_body = replace(local.dashboard_body, "/\"([0-9]+)\"/", "$1")
 }

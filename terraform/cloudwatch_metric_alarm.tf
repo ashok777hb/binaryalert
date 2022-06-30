@@ -2,7 +2,7 @@
 
 locals {
   // Use the existing SNS alarm topic if specified, otherwise use the created one
-  alarm_target = "${element(concat(aws_sns_topic.metric_alarms.*.arn, list(var.metric_alarm_sns_topic_arn)), 0)}"
+  alarm_target = element(concat(aws_sns_topic.metric_alarms.*.arn, tolist([var.metric_alarm_sns_topic_arn])), 0)
 }
 
 // The production BinaryAlert analyzer is not analyzing binaries.
@@ -22,7 +22,7 @@ EOF
   // No binaries analyzed for a while.
   comparison_operator       = "LessThanOrEqualToThreshold"
   threshold                 = 0
-  period                    = "${format("%d", var.expected_analysis_frequency_minutes * 60)}"
+  period                    = format("%d", var.expected_analysis_frequency_minutes * 60)
   evaluation_periods        = 1
   alarm_actions             = ["${local.alarm_target}"]
   insufficient_data_actions = ["${local.alarm_target}"]
@@ -48,7 +48,7 @@ EOF
   }
 
   comparison_operator       = "GreaterThanThreshold"
-  threshold                 = "${format("%d", ceil(var.analyze_queue_retention_secs * 0.75))}"
+  threshold                 = format("%d", ceil(var.analyze_queue_retention_secs * 0.75))
   period                    = 60
   evaluation_periods        = 10
   alarm_actions             = ["${local.alarm_target}"]
@@ -57,11 +57,11 @@ EOF
 
 // The downloader SQS queue is falling behind.
 resource "aws_cloudwatch_metric_alarm" "downloader_sqs_age" {
-  count      = "${var.enable_carbon_black_downloader ? 1 : 0}"
-  alarm_name = "${aws_sqs_queue.downloader_queue.name}_old_age"
+  count      = var.enable_carbon_black_downloader ? 1 : 0
+  alarm_name = "${aws_sqs_queue.downloader_queue[count.index].name}_old_age"
 
   alarm_description = <<EOF
-The queue ${aws_sqs_queue.downloader_queue.name} is not being processed quickly enough:
+The queue ${aws_sqs_queue.downloader_queue[count.index].name} is not being processed quickly enough:
 messages are reaching 75% of the queue retention and may be expired soon.
   - Consider increasing the lambda_download_concurrency_limit to process more events
   - Consider raising the retention period for this queue
@@ -72,11 +72,11 @@ EOF
   statistic   = "Minimum"
 
   dimensions = {
-    QueueName = "${aws_sqs_queue.downloader_queue.name}"
+    QueueName = "${aws_sqs_queue.downloader_queue[count.index].name}"
   }
 
   comparison_operator       = "GreaterThanThreshold"
-  threshold                 = "${format("%d", ceil(var.download_queue_retention_secs * 0.75))}"
+  threshold                 = format("%d", ceil(var.download_queue_retention_secs * 0.75))
   period                    = 60
   evaluation_periods        = 10
   alarm_actions             = ["${local.alarm_target}"]

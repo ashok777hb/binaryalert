@@ -1,8 +1,8 @@
 // S3 bucket for storing access logs.
 resource "aws_s3_bucket" "binaryalert_log_bucket" {
-  count = "${var.s3_log_bucket == "" ? 1 : 0}" // Create only if no pre-existing log bucket.
+  count = var.s3_log_bucket == "" ? 1 : 0 // Create only if no pre-existing log bucket.
 
-  bucket = "${format("%s.binaryalert-binaries.%s.access-logs", replace(var.name_prefix, "_", "."), var.aws_region)}"
+  bucket = format("%s.binaryalert-binaries.%s.access-logs", replace(var.name_prefix, "_", "."), var.aws_region)
   acl    = "log-delivery-write"
 
   // Everything in the log bucket rotates to infrequent access and expires.
@@ -17,7 +17,7 @@ resource "aws_s3_bucket" "binaryalert_log_bucket" {
     }
 
     expiration {
-      days = "${var.s3_log_expiration_days}"
+      days = var.s3_log_expiration_days
     }
 
     // Old/deleted object versions are permanently removed after 1 day.
@@ -29,7 +29,7 @@ resource "aws_s3_bucket" "binaryalert_log_bucket" {
   // Enable logging on the logging bucket itself.
   logging {
     // The target bucket is the same as the name of this bucket.
-    target_bucket = "${format("%s.binaryalert-binaries.%s.access-logs", replace(var.name_prefix, "_", "."), var.aws_region)}"
+    target_bucket = format("%s.binaryalert-binaries.%s.access-logs", replace(var.name_prefix, "_", "."), var.aws_region)
     target_prefix = "self/"
   }
 
@@ -41,8 +41,8 @@ resource "aws_s3_bucket" "binaryalert_log_bucket" {
     }
   }
 
-  tags {
-    Name = "${var.tagged_name}"
+  tags = {
+    Name = var.tagged_name
   }
 
   // Enabling versioning protects against accidental deletes.
@@ -50,7 +50,7 @@ resource "aws_s3_bucket" "binaryalert_log_bucket" {
     enabled = true
   }
 
-  force_destroy = "${var.force_destroy}"
+  force_destroy = var.force_destroy
 }
 
 // Source S3 bucket: binaries uploaded here will be automatically analyzed.
@@ -61,11 +61,11 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
   logging {
     // Send S3 access logs to either the user-defined logging bucket or the one we created.
     // Note: We can't reference log bucket ID here becuase the bucket may not exist.
-    target_bucket = "${var.s3_log_bucket == "" ?
+    target_bucket = (var.s3_log_bucket == "" ?
       format("%s.binaryalert-binaries.%s.access-logs", replace(var.name_prefix, "_", "."), var.aws_region)
-      : var.s3_log_bucket}"
+    : var.s3_log_bucket)
 
-    target_prefix = "${var.s3_log_prefix}"
+    target_prefix = var.s3_log_prefix
   }
 
   // Note: STANDARD_IA is not worth it because of the need to periodically re-analyze all binaries
@@ -98,21 +98,21 @@ resource "aws_s3_bucket" "binaryalert_binaries" {
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
-        kms_master_key_id = "${aws_kms_key.sse_s3.arn}"
+        kms_master_key_id = aws_kms_key.sse_s3.arn
         sse_algorithm     = "aws:kms"
       }
     }
   }
 
-  tags {
-    Name = "${var.tagged_name}"
+  tags = {
+    Name = var.tagged_name
   }
 
   versioning {
     enabled = true
   }
 
-  force_destroy = "${var.force_destroy}"
+  force_destroy = var.force_destroy
 }
 
 // Policy for source bucket that allows inventory delivery
@@ -149,13 +149,13 @@ data "aws_iam_policy_document" "allow_inventory" {
 }
 
 resource "aws_s3_bucket_policy" "allow_inventory" {
-  bucket = "${aws_s3_bucket.binaryalert_binaries.id}"
-  policy = "${data.aws_iam_policy_document.allow_inventory.json}"
+  bucket = aws_s3_bucket.binaryalert_binaries.id
+  policy = data.aws_iam_policy_document.allow_inventory.json
 }
 
 // Enable bucket inventory
 resource "aws_s3_bucket_inventory" "binary_inventory" {
-  bucket = "${aws_s3_bucket.binaryalert_binaries.id}"
+  bucket = aws_s3_bucket.binaryalert_binaries.id
   name   = "EntireBucketDaily"
 
   included_object_versions = "Current"
@@ -167,12 +167,12 @@ resource "aws_s3_bucket_inventory" "binary_inventory" {
   destination {
     bucket {
       format     = "CSV"
-      bucket_arn = "${aws_s3_bucket.binaryalert_binaries.arn}"
+      bucket_arn = aws_s3_bucket.binaryalert_binaries.arn
       prefix     = "inventory"
 
       encryption {
         sse_kms {
-          key_id = "${aws_kms_key.sse_s3.arn}"
+          key_id = aws_kms_key.sse_s3.arn
         }
       }
     }
@@ -181,13 +181,13 @@ resource "aws_s3_bucket_inventory" "binary_inventory" {
 
 // New objects uploaded for analysis notify the analyzer queue
 resource "aws_s3_bucket_notification" "bucket_notification" {
-  bucket = "${aws_s3_bucket.binaryalert_binaries.id}"
+  bucket = aws_s3_bucket.binaryalert_binaries.id
 
   queue {
-    queue_arn = "${aws_sqs_queue.analyzer_queue.arn}"
+    queue_arn = aws_sqs_queue.analyzer_queue.arn
     events    = ["s3:ObjectCreated:*"]
   }
 
   // The queue policy must be created before we can configure the S3 notification.
-  depends_on = ["aws_sqs_queue_policy.analyzer_queue_policy"]
+  depends_on = [aws_sqs_queue_policy.analyzer_queue_policy]
 }

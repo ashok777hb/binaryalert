@@ -17,7 +17,7 @@ data "aws_iam_policy_document" "base_policy" {
 
 resource "aws_iam_policy" "base_policy" {
   name   = "${var.name_prefix}_binaryalert_base_policy"
-  policy = "${data.aws_iam_policy_document.base_policy.json}"
+  policy = data.aws_iam_policy_document.base_policy.json
 }
 
 // ********** Analyzer **********
@@ -43,7 +43,7 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
       "kms:Describe*",
     ]
 
-    resources = ["${concat(list(aws_kms_key.sse_s3.arn, aws_kms_key.sse_sqs.arn), var.external_kms_key_resources)}"]
+    resources = concat(tolist([aws_kms_key.sse_s3.arn, aws_kms_key.sse_sqs.arn]), var.external_kms_key_resources)
   }
 
   statement {
@@ -54,13 +54,13 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
       "s3:HeadObject",
     ]
 
-    resources = ["${concat(list(format("%s/*", aws_s3_bucket.binaryalert_binaries.arn)), var.external_s3_bucket_resources)}"]
+    resources = concat(tolist([format("%s/*", aws_s3_bucket.binaryalert_binaries.arn)]), var.external_s3_bucket_resources)
   }
 
   statement {
     sid       = "PublishAlertsToSNS"
     actions   = ["sns:Publish"]
-    resources = ["${concat(list(aws_sns_topic.yara_match_alerts.arn), aws_sns_topic.no_yara_match.*.arn)}"]
+    resources = concat(tolist([aws_sns_topic.yara_match_alerts.arn]), aws_sns_topic.no_yara_match.*.arn)
   }
 
   statement {
@@ -79,14 +79,14 @@ data "aws_iam_policy_document" "binaryalert_analyzer_policy" {
 
 resource "aws_iam_role_policy" "binaryalert_analyzer_policy" {
   name   = "${var.name_prefix}_binaryalert_analyzer_policy"
-  role   = "${module.binaryalert_analyzer.role_id}"
-  policy = "${data.aws_iam_policy_document.binaryalert_analyzer_policy.json}"
+  role   = module.binaryalert_analyzer.role_id
+  policy = data.aws_iam_policy_document.binaryalert_analyzer_policy.json
 }
 
 // ********** Downloader **********
 
 data "aws_iam_policy_document" "binaryalert_downloader_policy" {
-  count = "${var.enable_carbon_black_downloader ? 1 : 0}"
+  count = var.enable_carbon_black_downloader ? 1 : 0
 
   statement {
     sid = "AllowSSE"
@@ -105,7 +105,7 @@ data "aws_iam_policy_document" "binaryalert_downloader_policy" {
   statement {
     sid       = "DecryptCarbonBlackCredentials"
     actions   = ["kms:Decrypt"]
-    resources = ["${aws_kms_key.carbon_black_credentials.arn}"]
+    resources = ["${aws_kms_key.carbon_black_credentials[count.index].arn}"]
   }
 
   statement {
@@ -124,13 +124,13 @@ data "aws_iam_policy_document" "binaryalert_downloader_policy" {
       "sqs:ReceiveMessage",
     ]
 
-    resources = ["${aws_sqs_queue.downloader_queue.arn}"]
+    resources = ["${aws_sqs_queue.downloader_queue[count.index].arn}"]
   }
 }
 
 resource "aws_iam_role_policy" "binaryalert_downloader_policy" {
-  count  = "${var.enable_carbon_black_downloader ? 1 : 0}"
+  count  = var.enable_carbon_black_downloader ? 1 : 0
   name   = "${var.name_prefix}_binaryalert_downloader_policy"
-  role   = "${module.binaryalert_downloader.role_id}"
-  policy = "${data.aws_iam_policy_document.binaryalert_downloader_policy.json}"
+  role   = module.binaryalert_downloader.role_id
+  policy = data.aws_iam_policy_document.binaryalert_downloader_policy[count.index].json
 }

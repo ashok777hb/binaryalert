@@ -18,13 +18,13 @@ data "aws_iam_policy_document" "lambda_execution_policy" {
 resource "aws_iam_role" "role" {
   count              = "${var.enabled}"
   name               = "${var.function_name}_role"
-  assume_role_policy = "${data.aws_iam_policy_document.lambda_execution_policy.json}"
+  assume_role_policy = "${data.aws_iam_policy_document.lambda_execution_policy[count.index].json}"
 }
 
 // Attach the base IAM policy.
 resource "aws_iam_role_policy_attachment" "attach_base_policy" {
   count      = "${var.enabled}"
-  role       = "${aws_iam_role.role.name}"
+  role       = "${aws_iam_role.role[count.index].name}"
   policy_arn = "${var.base_policy_arn}"
 }
 
@@ -34,7 +34,7 @@ resource "aws_cloudwatch_log_group" "lambda_log_group" {
   name              = "/aws/lambda/${var.function_name}"
   retention_in_days = "${var.log_retention_days}"
 
-  tags {
+  tags = {
     Name = "${var.tagged_name}"
   }
 }
@@ -46,7 +46,7 @@ resource "aws_lambda_function" "function" {
   function_name = "${var.function_name}"
   description   = "${var.description}"
   handler       = "${var.handler}"
-  role          = "${aws_iam_role.role.arn}"
+  role          = "${aws_iam_role.role[count.index].arn}"
   runtime       = "python3.6"
 
   memory_size                    = "${var.memory_size_mb}"
@@ -54,14 +54,14 @@ resource "aws_lambda_function" "function" {
   reserved_concurrent_executions = "${var.reserved_concurrent_executions}"
 
   filename         = "${var.filename}"
-  source_code_hash = "${base64sha256(file(var.filename))}"
+  source_code_hash = "${filebase64sha256(var.filename)}"
   publish          = true
 
   environment {
     variables = "${var.environment_variables}"
   }
 
-  tags {
+  tags ={
     Name = "${var.tagged_name}"
   }
 }
@@ -70,8 +70,8 @@ resource "aws_lambda_function" "function" {
 resource "aws_lambda_alias" "production_alias" {
   count            = "${var.enabled}"
   name             = "Production"
-  function_name    = "${aws_lambda_function.function.arn}"
-  function_version = "${aws_lambda_function.function.version}"
+  function_name    = "${aws_lambda_function.function[count.index].arn}"
+  function_version = "${aws_lambda_function.function[count.index].version}"
 }
 
 // Alarm if the Lambda function has more than the configured number of errors.
@@ -89,8 +89,8 @@ EOF
   statistic   = "Sum"
 
   dimensions = {
-    FunctionName = "${aws_lambda_function.function.function_name}"
-    Resource     = "${aws_lambda_function.function.function_name}:${aws_lambda_alias.production_alias.name}"
+    FunctionName = "${aws_lambda_function.function[count.index].function_name}"
+    Resource     = "${aws_lambda_function.function[count.index].function_name}:${aws_lambda_alias.production_alias[count.index].name}"
   }
 
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -98,5 +98,5 @@ EOF
   period              = "${var.alarm_errors_interval_secs}"
   evaluation_periods  = 1
 
-  alarm_actions = ["${var.alarm_sns_arns}"]
+  alarm_actions = "${var.alarm_sns_arns}"
 }

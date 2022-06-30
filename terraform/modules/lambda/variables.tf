@@ -40,8 +40,7 @@ variable "reserved_concurrent_executions" {
   description = "Reserved concurrency limit for this Lambda function"
 }
 
-variable "environment_variables" {
-  type        = "map"
+variable "environment_variables" {  
   description = "Map of environment variables available to the running Lambda function"
 }
 
@@ -69,6 +68,5 @@ variable "alarm_errors_interval_secs" {
 }
 
 variable "alarm_sns_arns" {
-  type        = "list"
   description = "A list of SNS topic ARNs which will be notified when a metric alarm triggers"
 }

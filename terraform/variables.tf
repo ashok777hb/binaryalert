@@ -30,13 +30,9 @@ variable "lambda_download_concurrency_limit" {}
 
 variable "force_destroy" {}
 
-variable "external_s3_bucket_resources" {
-  type = "list"
-}
+variable "external_s3_bucket_resources" {}
 
-variable "external_kms_key_resources" {
-  type = "list"
-}
+variable "external_kms_key_resources" {}
 
 variable "enable_negative_match_alerts" {}
 
