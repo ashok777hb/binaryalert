@@ -51,7 +51,7 @@ resource "aws_lambda_function" "function" {
 
   memory_size                    = "${var.memory_size_mb}"
   timeout                        = "${var.timeout_sec}"
-  reserved_concurrent_executions = "${var.reserved_concurrent_executions}"
+  //reserved_concurrent_executions = "${var.reserved_concurrent_executions}"
 
   filename         = "${var.filename}"
   source_code_hash = "${filebase64sha256(var.filename)}"

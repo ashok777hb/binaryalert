@@ -9,7 +9,7 @@ module "binaryalert_analyzer" {
   timeout_sec     = var.lambda_analyze_timeout_sec
   filename        = "lambda_analyzer.zip"
 
-  reserved_concurrent_executions = var.lambda_analyze_concurrency_limit
+  //reserved_concurrent_executions = var.lambda_analyze_concurrency_limit
 
   environment_variables = {
     NO_MATCHES_SNS_TOPIC_ARN       = "${element(concat(aws_sns_topic.no_yara_match.*.arn, tolist([""])), 0)}"
@@ -46,7 +46,7 @@ module "binaryalert_downloader" {
   timeout_sec     = var.lambda_download_timeout_sec
   filename        = "lambda_downloader.zip"
 
-  reserved_concurrent_executions = var.lambda_download_concurrency_limit
+  //reserved_concurrent_executions = var.lambda_download_concurrency_limit
 
   environment_variables = {
     CARBON_BLACK_URL                 = "${var.carbon_black_url}"

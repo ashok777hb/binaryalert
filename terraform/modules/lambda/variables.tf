@@ -36,9 +36,9 @@ variable "filename" {
   description = "Name of the .zip file containing the Lambda deployment package"
 }
 
-variable "reserved_concurrent_executions" {
-  description = "Reserved concurrency limit for this Lambda function"
-}
+# variable "reserved_concurrent_executions" {
+#   description = "Reserved concurrency limit for this Lambda function"
+# }
 
 variable "environment_variables" {  
   description = "Map of environment variables available to the running Lambda function"

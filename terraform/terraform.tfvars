@@ -12,7 +12,7 @@ aws_account_id = "798786837369"
 aws_region = "us-east-1"
 
 // Prefix used in all resource names (required for uniqueness). E.g. "company_team"
-name_prefix = "test123"
+name_prefix = "test1234"
 
 
 /* ********** [Auto-Configured] Optional CarbonBlack Downloader ********** */
@@ -78,14 +78,14 @@ dynamo_write_capacity = 5
 //     Retro Scan          Analyzer Lambda
 
 // Memory, time, and concurrency limits for the analyzer function.
-lambda_analyze_memory_mb         = 1024
-lambda_analyze_timeout_sec       = 300
-lambda_analyze_concurrency_limit = 100
+lambda_analyze_memory_mb   = 1024
+lambda_analyze_timeout_sec = 300
+#lambda_analyze_concurrency_limit = 1
 
 // Memory, time, and concurrency limits for the downloader function.
-lambda_download_memory_mb         = 128
-lambda_download_timeout_sec       = 300
-lambda_download_concurrency_limit = 100
+lambda_download_memory_mb   = 128
+lambda_download_timeout_sec = 300
+#lambda_download_concurrency_limit = 1
 
 
 // ##### S3 #####

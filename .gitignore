@@ -31,3 +31,4 @@ terminal.glue
 
 # Documentation build
 docs/build/
+Dockerfile
